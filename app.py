@@ -1,10 +1,15 @@
 import time
 from counterfit_connection import CounterFitConnection
+from counterfit_shims_grove.grove_led import GroveLed
 import requests
 CounterFitConnection.init('127.0.0.1', 5000)
 
 deviceId = -1
 myPollId = -1
+led = GroveLed(5)
+led2 = GroveLed(6)
+led3 = GroveLed(7)
+led4 = GroveLed(8)
 
 def tryToLink(code):
     link = "http://localhost:8080/link"
@@ -12,6 +17,15 @@ def tryToLink(code):
         "code": code
     }
     r = requests.post(url = link, params = body)
+    if r.status_code == 200:
+        led2.on()
+        time.sleep(3)
+        led2.off()
+    else:
+        led3.on()
+        time.sleep(3)
+        led3.off()
+
     data = r.json()
     global deviceId 
     deviceId = data["id"]
@@ -24,17 +38,20 @@ def sendAnswer(color):
     answer = {
         "color": color,
         "poll": {
-            "id": 41
+            "id": myPollId
         },
         "device":{
-            "id": 5
+            "id": deviceId
         } 
     }
     r = requests.post(url = URL, json = answer)
+    if r.status_code == 200:
+        led4.on()
+        time.sleep(3)
+        led4.off()
     data = r.json()
     print(data)
-#tryToLink(8269)
-#sendAnswer(1)
+
 while True:
     
     linkbutton = CounterFitConnection.get_sensor_boolean_value(0) # The button returns boolean values, True for pressed and False for released
@@ -53,7 +70,10 @@ while True:
     num = 0
     next = False
     linked = False
-    while linkbutton:
+    if linked and not linkbutton:
+        linked = False
+    while linkbutton and not linked:
+        led.on()
         linkbutton = CounterFitConnection.get_sensor_boolean_value(0)
         numbutton = CounterFitConnection.get_sensor_boolean_value(1)
         nextbutton = CounterFitConnection.get_sensor_boolean_value(2)
@@ -71,7 +91,6 @@ while True:
         if nextbutton and not next:
                 next = True
                 code[i] = num
-                print(num)
                 num = 0
                 i = i+1
         if not nextbutton and next:
@@ -81,6 +100,7 @@ while True:
             if not linked: 
                 tryToLink(finalCode)
                 linked = True
+                led.off()
 
 
 
